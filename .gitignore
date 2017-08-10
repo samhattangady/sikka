@@ -1,0 +1,6 @@
+# pycaches
+__pycache__
+*/__pycache__
+
+# Sublime text files
+*.sublime-*
