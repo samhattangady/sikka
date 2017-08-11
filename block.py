@@ -27,21 +27,19 @@ class Block(object):
             self.time = from_serialized(block_hex.read(TIME_BYTES * 2))
             self.nbits = from_serialized(block_hex.read(NBITS_BYTES * 2))
             self.nonce = from_serialized(block_hex.read(NONCE_BYTES * 2))
-
             self.transaction_count = read_var_int(block_hex)
-            # self.transaction_count = block_hex.read(2)
-            # if self.transaction_count == 'fd':
-            #     self.transaction_count = from_serialized(block_hex.read(2 * 2))
-            # elif self.transaction_count == 'fe':
-            #     self.transaction_count = from_serialized(block_hex.read(3 * 2))
-            # elif self.transaction_count == 'ff':
-            #     self.transaction_count = from_serialized(block_hex.read(4 * 2))
+            self._get_coinbase_transaction = self._get_coinbase_transaction(block_hex)
 
-            self.transaction_version = from_serialized(block_hex.read(VERSION_BYTES * 2))
-
+    def _get_coinbase_transaction(self, block_hex_file):
+        self.transaction_version = from_serialized(block_hex_file.read(VERSION_BYTES * 2))
+        print(self.transaction_version)
+        tx_in = read_var_int(block_hex_file)
+        coinbase_hash = from_serialized(block_hex_file.read(32*2))
+        coinbase_index = from_serialized(block_hex_file.read(4*2))
+        script_bytes = int(read_var_int(block_hex_file), 16)
+        print(int(from_serialized(block_hex_file.read(8)), 16))
 
 
 b = Block()
 b.from_hex_dump('blocks/465086')
-print(b.transaction_version)
 
