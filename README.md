@@ -1,3 +1,3 @@
-# Svarna
+# Sikka
 
 Bitcoin client in python
