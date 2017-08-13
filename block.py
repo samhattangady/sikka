@@ -18,6 +18,13 @@ class Block(object):
     """
 
     @property
+    def bytes(self):
+        """
+        Raw byte version of the transaction
+        """
+        return self._bytes
+
+    @property
     def version(self):
         """
         The version of the block indicates which block validation rules
@@ -88,6 +95,7 @@ class Block(object):
         return self._transactions
 
     def __init__(self):
+        self._bytes = None
         self._version = None
         self._previous_hash = None
         self._merkle_root = None
@@ -99,26 +107,20 @@ class Block(object):
 
     def from_hex_dump(self, hex_file_path):
         with open(hex_file_path) as block_hex:
-            self._version = deserialize(block_hex.read(VERSION_BYTES * 2))
-            self._previous_hash = deserialize(block_hex.read(PREVIOUS_HASH_BYTES * 2))
-            self._merkle_root = deserialize(block_hex.read(MERKLE_ROOT_BYTES * 2))
-            self._timestamp = deserialize(block_hex.read(TIME_BYTES * 2))
-            self._target = deserialize(block_hex.read(NBITS_BYTES * 2))
-            self._nonce = deserialize(block_hex.read(NONCE_BYTES * 2))
-            self._transaction_count = read_var_int(block_hex)
-            self._get_coinbase_transaction = self._get_coinbase_transaction(block_hex)
+            self._bytes = block_hex.read()
+        self._read_header()
+            # self._version = deserialize(block_hex.read(VERSION_BYTES * 2))
+            # self._previous_hash = deserialize(block_hex.read(PREVIOUS_HASH_BYTES * 2))
+            # self._merkle_root = deserialize(block_hex.read(MERKLE_ROOT_BYTES * 2))
+            # self._timestamp = deserialize(block_hex.read(TIME_BYTES * 2))
+            # self._target = deserialize(block_hex.read(NBITS_BYTES * 2))
+            # self._nonce = deserialize(block_hex.read(NONCE_BYTES * 2))
+            # self._transaction_count = read_var_int(block_hex)
+            # self._get_coinbase_transaction = self._get_coinbase_transaction(block_hex)
 
-    def _get_coinbase_transaction(self, block_hex_file):
-        # TODO Push this to transaction.py
-        transaction_version = deserialize(block_hex_file.read(VERSION_BYTES * 2))
-        tx_in = read_var_int(block_hex_file)
-        print(tx_in)
-        coinbase_hash = deserialize(block_hex_file.read(32*2))
-        coinbase_index = deserialize(block_hex_file.read(4*2))
-        script_bytes = read_var_int(block_hex_file)
-        print(script_bytes)
-        coinbase_script = None
-        height = int(deserialize(block_hex_file.read(2)),16)
+    def _read_header(self):
+        # TODO
+        pass
 
 
 
