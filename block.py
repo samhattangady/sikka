@@ -1,4 +1,4 @@
-from helpers import deserialize, read_var_int
+from helpers import deserialize
 from transaction import Transaction
 
 VERSION_BYTES = 4
@@ -7,6 +7,9 @@ MERKLE_ROOT_BYTES = 32
 TIME_BYTES = 4
 NBITS_BYTES = 4
 NONCE_BYTES = 4
+OUTPOINT_BYTES = 36
+SEQUENCE_BYTES = 4
+OUTPUT_VALUE_BYTES = 8
 
 
 class Block(object):
@@ -104,26 +107,63 @@ class Block(object):
         self._nonce = None
         self._transaction_count = None
         self._transactions = []
+        self._bytes_read = 0
 
-    def from_hex_dump(self, hex_file_path):
+    def parse_hex_dump(self, hex_file_path):
         with open(hex_file_path) as block_hex:
             self._bytes = block_hex.read()
-        self._read_header()
-            # self._version = deserialize(block_hex.read(VERSION_BYTES * 2))
-            # self._previous_hash = deserialize(block_hex.read(PREVIOUS_HASH_BYTES * 2))
-            # self._merkle_root = deserialize(block_hex.read(MERKLE_ROOT_BYTES * 2))
-            # self._timestamp = deserialize(block_hex.read(TIME_BYTES * 2))
-            # self._target = deserialize(block_hex.read(NBITS_BYTES * 2))
-            # self._nonce = deserialize(block_hex.read(NONCE_BYTES * 2))
-            # self._transaction_count = read_var_int(block_hex)
-            # self._get_coinbase_transaction = self._get_coinbase_transaction(block_hex)
+        self._parse_header()
+        self._transaction_count = self._read_var_int()
+        self._parse_transactions()
 
-    def _read_header(self):
-        # TODO
-        pass
+    def _parse_header(self):
+        self._version = deserialize(self._read_bytes(VERSION_BYTES))
+        self._previous_hash = deserialize(self._read_bytes(PREVIOUS_HASH_BYTES))
+        self._merkle_root = deserialize(self._read_bytes(MERKLE_ROOT_BYTES))
+        self._timestamp = deserialize(self._read_bytes(TIME_BYTES))
+        self._target = deserialize(self._read_bytes(NBITS_BYTES))
+        self._nonce = deserialize(self._read_bytes(NONCE_BYTES))
 
+    def _parse_transactions(self):
+        for _ in range(self._transaction_count):
+            self._transactions.append(self._parse_transaction())
+
+    def _parse_transaction(self):
+        version = self._read_bytes(VERSION_BYTES)
+        number_of_inputs = self._read_var_int()
+        inputs = []
+        for _ in range(number_of_inputs):
+            previous_output = self._read_bytes(OUTPOINT_BYTES)
+            script_bytes = self._read_var_int()
+            signature_script = self._read_bytes(script_bytes)
+            sequence = self._read_bytes(SEQUENCE_BYTES)
+            inputs.append((previous_output, signature_script, sequence))
+        number_of_outputs = self._read_var_int()
+        outputs = []
+        for _ in range(number_of_outputs):
+            value = deserialize(self._read_bytes(OUTPUT_VALUE_BYTES))
+            script_bytes = self._read_var_int()
+            output_script = self._read_bytes(script_bytes)
+            outputs.append((value, output_script))
+        lock_time = self._read_bytes(TIME_BYTES)
+        return Transaction(version, inputs, outputs, lock_time)
+
+    def _read_bytes(self, number_of_bytes):
+        start_index = self._bytes_read * 2
+        end_index = (self._bytes_read + number_of_bytes) * 2
+        self._bytes_read += number_of_bytes
+        return self._bytes[start_index:end_index]
+
+    def _read_var_int(self):
+        var_int = self._read_bytes(1)
+        if var_int == 'fd':
+            var_int = deserialize(self._read_bytes(2))
+        elif var_int == 'fe':
+            var_int = deserialize(self._read_bytes(3))
+        elif var_int == 'ff':
+            var_int = deserialize(self._read_bytes(4))
+        return int(var_int, 16)
 
 
 b = Block()
-b.from_hex_dump('blocks/465086')
-
+b.parse_hex_dump('blocks/465086')
