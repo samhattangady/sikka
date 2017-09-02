@@ -7,7 +7,7 @@ MERKLE_ROOT_BYTES = 32
 TIME_BYTES = 4
 NBITS_BYTES = 4
 NONCE_BYTES = 4
-OUTPOINT_BYTES = 36
+INDEX_BYTES = 4
 SEQUENCE_BYTES = 4
 OUTPUT_VALUE_BYTES = 8
 
@@ -113,7 +113,6 @@ class Block(object):
         with open(hex_file_path) as block_hex:
             self._bytes = block_hex.read()
         self._parse_header()
-        self._transaction_count = self._read_var_int()
         self._parse_transactions()
 
     def _parse_header(self):
@@ -125,6 +124,7 @@ class Block(object):
         self._nonce = deserialize(self._read_bytes(NONCE_BYTES))
 
     def _parse_transactions(self):
+        self._transaction_count = self._read_var_int()
         for _ in range(self._transaction_count):
             self._transactions.append(self._parse_transaction())
 
@@ -133,11 +133,12 @@ class Block(object):
         number_of_inputs = self._read_var_int()
         inputs = []
         for _ in range(number_of_inputs):
-            previous_output = self._read_bytes(OUTPOINT_BYTES)
+            prev_tx_id = deserialize(self._read_bytes(PREVIOUS_HASH_BYTES))
+            prev_tx_index = deserialize(self._read_bytes(INDEX_BYTES))
             script_bytes = self._read_var_int()
             signature_script = self._read_bytes(script_bytes)
             sequence = self._read_bytes(SEQUENCE_BYTES)
-            inputs.append((previous_output, signature_script, sequence))
+            inputs.append((prev_tx_id, prev_tx_index, signature_script, sequence))
         number_of_outputs = self._read_var_int()
         outputs = []
         for _ in range(number_of_outputs):
