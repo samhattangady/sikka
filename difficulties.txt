@@ -1,0 +1,5 @@
+1. OP_HASH160
+Was using string instead of hex. Took a while to figure out.
+
+2. OP_CHECKSIG
+Spent way too long figuring out all the things. I should have started with checking with just the message, and then slowly moved back.

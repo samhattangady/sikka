@@ -165,6 +165,7 @@ class Block(object):
             var_int = deserialize(self._read_bytes(4))
         return int(var_int, 16)
 
-
+a = Block()
+a.parse_hex_dump('blocks/465086')
 b = Block()
-b.parse_hex_dump('blocks/465086')
+b.parse_hex_dump('blocks/465102')
