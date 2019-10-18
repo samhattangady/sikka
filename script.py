@@ -1,5 +1,6 @@
 import hashlib
 
+from helpers import deserialize
 from opcodes import get_opcode, PUSH_CODES
 
 class Script(object):
@@ -24,35 +25,64 @@ class Script(object):
         return self._script[start_index:end_index]
 
     def execute(self):
+        self._execution_pointer = 0
+        self._stack = []
+        self._alt_stack = []
         print('Script:', self._script)
         while self._execution_pointer < len(self._script) / 2:
             opcode = get_opcode(self._read_bytes(1))
             print(opcode)
-            self._perform_operation(opcode)
+            if not (self._perform_operation(opcode)):
+                return False
             print(self._stack)
+        result = self._stack.pop()
+        if len(self._stack) == 0 or self._stack.pop() == 'OP_FALSE':
+            return False
+        return True
+
+    def interpret(self):
+        self._execution_pointer = 0
+        while self._execution_pointer < len(self._script) / 2:
+            opcode_byte = self._read_bytes(1)
+            print(opcode_byte, end=' ')
+            opcode = get_opcode(opcode_byte)
+            print(opcode)
+            if opcode in PUSH_CODES:
+                num_bytes = PUSH_CODES.index(opcode)+1
+                print(self._read_bytes(num_bytes))
+            elif opcode == 'OP_PUSHDATA1':
+                num_bytes = int(self._read_bytes(1), 16)
+                print(self._read_bytes(num_bytes))
 
     def _perform_operation(self, opcode):
         if opcode in ['OP_FALSE']:
             self._stack.append(0)
-        elif opcode in PUSH_CODES:
-            num_bytes = PUSH_CODES.index(opcode)+1
+            return True
+        if opcode in PUSH_CODES:
+            num_bytes = PUSH_CODES.index(opcode) + 1
             self._stack.append(self._read_bytes(num_bytes))
-        elif opcode == 'OP_PUSHDATA1':
+            return True
+        if opcode == 'OP_PUSHDATA1':
             num_bytes = int(self._read_bytes(1), 16)
             self._stack.append(self._read_bytes(num_bytes))
-        elif opcode == 'OP_DUP':
+            return True
+        if opcode == 'OP_DUP':
             self._stack.append(self._stack[-1])
-        elif opcode == 'OP_HASH160':
+            return True
+        if opcode == 'OP_HASH160':
             operand = self._stack.pop()
-            sha256 = hashlib.sha256(bytes(operand, 'ascii')).hexdigest()
-            ripemd160 = hashlib.new('ripemd160')
-            ripemd160.update(bytes(sha256, 'ascii'))
-            self._stack.append(ripemd160.hexdigest())
-        elif opcode == 'OP_EQUALVERIFY':
-            lhs = self._stack.pop()
-            rhs = self._stack.pop()
-            result = lhs == rhs
-            self._stack.append(result)
-        else:
-            exit()
+            sha256 = self._sha256(operand)
+            hash160 = self._ripemd160(sha256)
+            self._stack.append(hash160)
+            return True
+        if opcode == 'OP_EQUALVERIFY':
+            return self._stack.pop() == self._stack.pop()
+
+    def _sha256(self, hex_input):
+        return hashlib.sha256(bytes.fromhex(hex_input)).hexdigest()
+
+    def _ripemd160(self, hex_input):
+        ripemd160 = hashlib.new('ripemd160')
+        ripemd160.update(bytes.fromhex(hex_input))
+        return ripemd160.hexdigest()
 
